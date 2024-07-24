@@ -5,21 +5,48 @@ import Header from './components/Header/Header';
 import List from './components/List/List';
 import Map from './components/Map/Map';
 
-function App() {
+import { getPlacesData } from './api/travelAdvisorAPI';
+
+const App = () => {
+  const [places, setPlaces] = useState([]);
+  const [coordinates, setCoordinates] = useState({});
+  const [bounds, setBounds] = useState(null);
+  const [type, setType] = useState('restaurants');
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(({ coords: { latitude, longitude } }) => {
+      setCoordinates({ lat: latitude, lng: longitude });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (bounds) {
+      getPlacesData(type, bounds.sw, bounds.ne)
+        .then((data) => {
+          console.log(data);
+          setPlaces(data);
+        });
+    }
+  }, [type, bounds]);
+
   return (
     <>
-    <CssBaseline />
-    <Header />
-    <Grid container spacing={3} style={{ width: '100%' }}>
-      <Grid item xs={12} md={4}>
-        List
+      <CssBaseline />
+      <Header />
+      <Grid container spacing={3} style={{ width: '100%' }}>
+        <Grid item xs={12} md={4}>
+          <List places={places} type={type} setType={setType} />
+        </Grid>
+        <Grid item xs={12} md={8} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Map
+            setCoordinates={setCoordinates}
+            setBounds={setBounds}
+            coordinates={coordinates}
+          />
+        </Grid>
       </Grid>
-      <Grid item xs={12} md={8} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <Map />
-      </Grid>
-    </Grid>
-  </>
+    </>
   );
-}
+};
 
 export default App;
