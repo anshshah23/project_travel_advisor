@@ -1,23 +1,26 @@
 {
-  "name": "google-map-app",
+  "name": "travel_advisor",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@material-ui/core": "^4.12.2",
-    "@material-ui/icons": "^4.11.2",
-    "@material-ui/lab": "^4.0.0-alpha.60",
-    "@react-google-maps/api": "^2.2.0",
-    "@testing-library/jest-dom": "^5.9.0",
-    "@testing-library/react": "^10.2.1",
-    "@testing-library/user-event": "^12.0.2",
+    "@emotion/react": "^11.13.0",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^5.16.4",
+    "@mui/lab": "^5.0.0-alpha.172",
+    "@mui/material": "^5.16.4",
+    "@mui/styles": "^5.16.4",
+    "@mui/system": "^5.16.4",
+    "@react-google-maps/api": "^2.19.3",
+    "@testing-library/jest-dom": "^5.14.1",
+    "@testing-library/react": "^13.0.0",
+    "@testing-library/user-event": "^13.2.1",
     "axios": "^1.7.2",
-    "dotenv": "^16.4.5",
-    "google-map-react": "^2.1.10",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-icons": "^4.2.0",
-    "react-scripts": "^3.0.1",
-    "web-vitals": "^0.2.2"
+    "google-map-react": "^2.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-google-maps": "^9.4.5",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^2.1.0"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -26,7 +29,10 @@
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
-    "extends": "react-app"
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
   },
   "browserslist": {
     "production": [
@@ -39,14 +45,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "babel-eslint": "^10.1.0",
-    "eslint": "^7.31.0",
-    "eslint-config-airbnb": "^18.2.1",
-    "eslint-plugin-import": "^2.23.4",
-    "eslint-plugin-jsx-a11y": "^6.4.1",
-    "eslint-plugin-react": "^7.24.0",
-    "eslint-plugin-react-hooks": "^4.2.0"
   }
 }
