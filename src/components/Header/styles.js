@@ -3,7 +3,7 @@ import { alpha } from '@mui/system';
 
 export default makeStyles((theme) => ({
   title: {
-    display: 'flex', flexDirection: 'row', alignItems: 'center',
+    display: 'none',
     [theme.breakpoints.up('sm')]: {
       display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '20px',
     },
@@ -38,6 +38,6 @@ export default makeStyles((theme) => ({
     padding: theme.spacing(1, 1, 1, 0), paddingLeft: `calc(1em + ${theme.spacing(4)}px)`, transition: theme.transitions.create('width'), width: '100%', [theme.breakpoints.up('md')]: { width: '20ch' },
   },
   toolbar: {
-    display: 'flex', justifyContent: 'space-between',     background: 'linear-gradient(to right bottom, #1D43FE, #1DFE9F)',
+    display: 'flex', justifyContent: 'space-between',     background: 'linear-gradient(to right bottom, #1D43FE, #1DFE9F)', marginBottom: '0px',
   },
 }));
