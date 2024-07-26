@@ -4,14 +4,12 @@ import PlaceDetails from '../PlaceDetails/PlaceDetails';
 
 import useStyles from './styles';
 
-const List = ({ places, type, setType, rating, setRating, isLoading }) => {
+const List = ({ places, type, setType, rating, setRating }) => {
   const classes = useStyles();
 
   return (
     <div className={classes.container}>
-      <Typography variant="h5" style={{ paddingBottom: 10 }}>
-        Restaurants, Hotels & Attractions around you
-      </Typography>
+      <Typography variant="h5" style={{ paddingBottom: 10 }}>Restaurants, Hotels & Attractions around you</Typography>
       <FormControl className={classes.formControl} style={{ marginRight: 12 }}>
         <InputLabel>Types</InputLabel>
         <Select value={type} onChange={(e) => setType(e.target.value)}>
@@ -29,17 +27,13 @@ const List = ({ places, type, setType, rating, setRating, isLoading }) => {
           <MenuItem value={4.5}>Above 4.5</MenuItem>
         </Select>
       </FormControl>
-      {isLoading ? (
-        <Typography variant="h6" style={{ textAlign: 'center' }}>Loading...</Typography>
-      ) : (
-        <Grid container spacing={3} className={classes.list} style={{ marginTop: '5px' }}>
-          {places?.map((place, i) => (
-            <Grid item key={i} xs={12}>
-              <PlaceDetails place={place} />
-            </Grid>
-          ))}
-        </Grid>
-      )}
+      <Grid container spacing={3} className={classes.list} style={{marginTop:'5px'}}>
+        {places?.map((place, i) => (
+          <Grid item key={i} xs={12}>
+            <PlaceDetails place={place} />
+          </Grid>
+        ))}
+      </Grid>
     </div>
   );
 };

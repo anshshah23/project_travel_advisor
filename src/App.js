@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { CssBaseline, Grid } from '@mui/material';
-import { LoadScript } from '@react-google-maps/api';
 
 import Header from './components/Header/Header';
 import List from './components/List/List';
 import Map from './components/Map/Map';
 
-import { getPlacesData, getWeatherData } from './api/travelAdvisorAPI';
-
-const libraries = ['places'];
+import { getPlacesData } from './api/travelAdvisorAPI';
 
 const App = () => {
   const [places, setPlaces] = useState([]);
@@ -17,8 +14,6 @@ const App = () => {
   const [type, setType] = useState('restaurants');
   const [rating, setRating] = useState('3');
   const [filteredPlaces, setFilteredPlaces] = useState([]);
-  const [weatherData, setWeatherData] = useState([]);
-  const [autocomplete, setAutocomplete] = useState(null);
   const [childClicked, setChildClicked] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,57 +24,31 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    const filtered = places.filter((place) => place.rating >= rating);
-    setFilteredPlaces(filtered);
+    const filteredPlaces = places.filter((place) => place.rating>= rating);
+    setFilteredPlaces(filteredPlaces);
   }, [places, rating]);
 
   useEffect(() => {
     if (bounds) {
-      setIsLoading(true);
-
-      getWeatherData(coordinates.lat, coordinates.lng).then((data) => setWeatherData(data));
-
-      getPlacesData(type, bounds.sw, bounds.ne).then((data) => {
-        setPlaces(data.filter((place) => place.name && place.num_reviews > 0));
-        setFilteredPlaces([]);
-        setRating('3');
-        setIsLoading(false);
-      });
+      getPlacesData(type, bounds.sw, bounds.ne)
+        .then((data) => {
+          console.log(data);
+          setPlaces(data);
+        });
     }
-  }, [type, bounds, coordinates]);
-
-  const onLoad = (autoC) => {
-    console.log('Autocomplete loaded:', autoC);
-    setAutocomplete(autoC);
-  };
-
-  const onPlaceChanged = () => {
-    if (autocomplete !== null) {
-      const place = autocomplete.getPlace();
-      if (place.geometry) {
-        const lat = place.geometry.location.lat();
-        const lng = place.geometry.location.lng();
-        setCoordinates({ lat, lng });
-        console.log('Place changed:', { lat, lng });
-      }
-    }
-  };
+  }, [type, bounds]);
 
   return (
-    <LoadScript googleMapsApiKey="AIzaSyDwp2cdhn7QTPn5geUvnxa28Ib4lyhGSR8" libraries={libraries}>
+    <>
       <CssBaseline />
-      <Header onPlaceChanged={onPlaceChanged} onLoad={onLoad} />
+      <Header />
       <Grid container spacing={3} style={{ width: '100%' }}>
         <Grid item xs={12} md={4}>
           <List
             isLoading={isLoading}
             childClicked={childClicked}
-            places={filteredPlaces.length ? filteredPlaces : places}
-            type={type}
-            setType={setType}
-            rating={rating}
-            setRating={setRating}
-          />
+            places = {filteredPlaces.length ? filteredPlaces : places}
+             type={type} setType={setType} rating={rating} setRating={setRating} />
         </Grid>
         <Grid item xs={12} md={8} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <Map
@@ -88,11 +57,10 @@ const App = () => {
             coordinates={coordinates}
             places={filteredPlaces.length ? filteredPlaces : places}
             setChildClicked={setChildClicked}
-            weatherData={weatherData}
           />
         </Grid>
       </Grid>
-    </LoadScript>
+    </>
   );
 };
 

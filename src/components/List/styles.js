@@ -2,9 +2,9 @@ import { makeStyles } from "@mui/styles";
 
 export default makeStyles((theme) => ({
     formControl: {
-        marginLeft: '200px',
-        marginRight: '200px',
+        margin: theme.spacing(1),
         minWidth: 120,
+        marginBottom: '30px',
     },
     selectEmpty: {
         marginTop: theme.spacing(2),
@@ -16,10 +16,10 @@ export default makeStyles((theme) => ({
         alignItems: 'center',
     },
     container: {
-        paddingLeft: '10px',
+        padding: '25px',
     },
     marginBottom: {
-        marginBottom: '0px',
+        marginBottom: '30px',
     },
     list: {
         height: '75vh',
