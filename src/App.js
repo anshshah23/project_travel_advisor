@@ -18,9 +18,11 @@ const App = () => {
   const [rating, setRating] = useState('3');
   const [filteredPlaces, setFilteredPlaces] = useState([]);
   const [weatherData, setWeatherData] = useState([]);
+
   const [autocomplete, setAutocomplete] = useState(null);
   const [childClicked, setChildClicked] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState(null);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(({ coords: { latitude, longitude } }) => {
@@ -29,10 +31,8 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (Array.isArray(places)) {
-      const filtered = places.filter((place) => place.rating >= rating);
-      setFilteredPlaces(filtered);
-    }
+    const filtered = places.filter((place) => place.rating >= rating);
+    setFilteredPlaces(filtered);
   }, [places, rating]);
 
   useEffect(() => {
@@ -42,17 +42,13 @@ const App = () => {
       getWeatherData(coordinates.lat, coordinates.lng).then((data) => setWeatherData(data));
 
       getPlacesData(type, bounds.sw, bounds.ne).then((data) => {
-        if (Array.isArray(data)) {
-          setPlaces(data.filter((place) => place.name && place.num_reviews > 0));
-        } else {
-          setPlaces([]);
-        }
+        setPlaces(data.filter((place) => place.name && place.num_reviews > 0));
         setFilteredPlaces([]);
         setRating('3');
         setIsLoading(false);
       });
     }
-  }, [type, bounds, coordinates]);
+  }, [bounds, type, coordinates]);
 
   const onLoad = (autoC) => {
     console.log('Autocomplete loaded:', autoC);
@@ -71,11 +67,15 @@ const App = () => {
     }
   };
 
+  const handleMapPlaceClick = (place) => {
+    setSelectedPlace(place);
+  };
+
   return (
     <LoadScript googleMapsApiKey="AIzaSyBFvPaROum9S-qCCxZBCGgwL6vQrsETOpU" libraries={libraries}>
       <CssBaseline />
       <Header onPlaceChanged={onPlaceChanged} onLoad={onLoad} />
-      <Grid container spacing={3} style={{ width: '100%', padding:'0px' }}>
+      <Grid container spacing={3} style={{ width: '100%' }}>
         <Grid item xs={12} md={4}>
           <List
             isLoading={isLoading}
@@ -85,6 +85,7 @@ const App = () => {
             setType={setType}
             rating={rating}
             setRating={setRating}
+            selectedPlace={selectedPlace}
           />
         </Grid>
         <Grid item xs={12} md={8} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -95,6 +96,7 @@ const App = () => {
             places={filteredPlaces.length ? filteredPlaces : places}
             setChildClicked={setChildClicked}
             weatherData={weatherData}
+            onPlaceClick={handleMapPlaceClick} // Pass handleMapPlaceClick to Map
           />
         </Grid>
       </Grid>

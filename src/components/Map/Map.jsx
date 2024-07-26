@@ -6,7 +6,7 @@ import Rating from '@mui/lab/Rating';
 
 import useStyles from './styles';
 
-const Map = ({ setCoordinates, setBounds, coordinates, places, weatherData }) => {
+const Map = ({ setCoordinates, setBounds, coordinates, places, weatherData, onPlaceClick }) => {
   const classes = useStyles();
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -30,6 +30,7 @@ const Map = ({ setCoordinates, setBounds, coordinates, places, weatherData }) =>
             lat={Number(place.latitude)}
             lng={Number(place.longitude)}
             key={i}
+            onClick={() => onPlaceClick(place)}
           >
             {isMobile ? (
               <LocationOnOutlined color="primary" fontSize="large" />
