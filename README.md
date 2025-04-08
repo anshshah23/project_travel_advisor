@@ -1,4 +1,4 @@
-https://uiverse.io/Nawsome/ancient-yak-42
+Inspired by https://uiverse.io/Nawsome/ancient-yak-42
 
 # Getting Started with Create React App
 
