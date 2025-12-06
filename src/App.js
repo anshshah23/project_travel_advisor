@@ -1,105 +1,161 @@
 import React, { useState, useEffect } from 'react';
-import { CssBaseline, Grid } from '@mui/material';
+import { CssBaseline, Grid, Box } from '@mui/material';
 import { LoadScript } from '@react-google-maps/api';
 
+import { getPlacesData, searchPlacesByLocation } from './api/travelAdvisorAPI';
 import Header from './components/Header/Header';
 import List from './components/List/List';
 import Map from './components/Map/Map';
 
-import { getPlacesData, getWeatherData } from './api/travelAdvisorAPI';
-
 const libraries = ['places'];
+const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAP_API_KEY;
 
 const App = () => {
-  const [places, setPlaces] = useState([]);
-  const [coordinates, setCoordinates] = useState({});
-  const [bounds, setBounds] = useState(null);
   const [type, setType] = useState('restaurants');
-  const [rating, setRating] = useState('3');
+  const [rating, setRating] = useState('');
+  const [center, setCenter] = useState({ lat: 0, lng: 0 });
+  const [places, setPlaces] = useState([]);
   const [filteredPlaces, setFilteredPlaces] = useState([]);
-  const [weatherData, setWeatherData] = useState([]);
-
-  const [autocomplete, setAutocomplete] = useState(null);
   const [childClicked, setChildClicked] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [bounds, setBounds] = useState(null);
 
+  // Get user's current location on mount and set initial bounds
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(({ coords: { latitude, longitude } }) => {
-      setCoordinates({ lat: latitude, lng: longitude });
-    });
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: { latitude, longitude } }) => {
+        const coords = { lat: latitude, lng: longitude };
+        setCenter(coords);
+        
+        // Set initial bounds (approximately 10km radius)
+        const latOffset = 0.1;
+        const lngOffset = 0.1;
+        setBounds({
+          sw: { lat: latitude - latOffset, lng: longitude - lngOffset },
+          ne: { lat: latitude + latOffset, lng: longitude + lngOffset }
+        });
+      },
+      () => {
+        // Default to New York if geolocation fails
+        const lat = 40.7128;
+        const lng = -74.0060;
+        setCenter({ lat, lng });
+        
+        // Set initial bounds
+        const latOffset = 0.1;
+        const lngOffset = 0.1;
+        setBounds({
+          sw: { lat: lat - latOffset, lng: lng - lngOffset },
+          ne: { lat: lat + latOffset, lng: lng + lngOffset }
+        });
+      }
+    );
   }, []);
 
+  // Filter places based on rating
   useEffect(() => {
-    const filtered = places.filter((place) => place.rating >= rating);
-    setFilteredPlaces(filtered);
-  }, [places, rating]);
+    if (rating) {
+      const filtered = places.filter((place) => Number(place.rating) >= Number(rating));
+      setFilteredPlaces(filtered);
+    } else {
+      setFilteredPlaces(places);
+    }
+  }, [rating, places]);
 
+  // Fetch places when bounds or type changes
   useEffect(() => {
     if (bounds) {
       setIsLoading(true);
 
-      getWeatherData(coordinates.lat, coordinates.lng).then((data) => setWeatherData(data));
+      getPlacesData(type, bounds.sw, bounds.ne)
+        .then((data) => {
+          const validPlaces = data?.filter((place) => place.name && place.num_reviews > 0) || [];
+          setPlaces(validPlaces);
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          console.error('Error fetching places:', error);
+          setIsLoading(false);
+        });
+    }
+  }, [bounds, type]);
 
-      getPlacesData(type, bounds.sw, bounds.ne).then((data) => {
-        setPlaces(data.filter((place) => place.name && place.num_reviews > 0));
-        setFilteredPlaces([]);
-        setRating('3');
+  const handlePlaceSelected = async (location) => {
+    setCenter({ lat: location.lat, lng: location.lng });
+    
+    // If we have a geoId, fetch places for that specific location
+    if (location.geoId) {
+      setIsLoading(true);
+      try {
+        const data = await searchPlacesByLocation(location.geoId, type);
+        const validPlaces = data?.filter((place) => place.name && place.num_reviews > 0) || [];
+        setPlaces(validPlaces);
+      } catch (error) {
+        console.error('Error fetching places for location:', error);
+      } finally {
         setIsLoading(false);
+      }
+    } else {
+      // Otherwise, set bounds around the location
+      const latOffset = 0.1;
+      const lngOffset = 0.1;
+      setBounds({
+        sw: { lat: location.lat - latOffset, lng: location.lng - lngOffset },
+        ne: { lat: location.lat + latOffset, lng: location.lng + lngOffset }
       });
     }
-  }, [bounds, type, coordinates]);
-
-  const onLoad = (autoC) => {
-    console.log('Autocomplete loaded:', autoC);
-    setAutocomplete(autoC);
   };
 
-  const onPlaceChanged = () => {
-    if (autocomplete !== null) {
-      const place = autocomplete.getPlace();
-      if (place.geometry) {
-        const lat = place.geometry.location.lat();
-        const lng = place.geometry.location.lng();
-        setCoordinates({ lat, lng });
-        console.log('Place changed:', { lat, lng });
-      }
-    }
+  const handleMarkerClick = (index) => {
+    setChildClicked(index);
   };
 
-  const handleMapPlaceClick = (place) => {
-    setSelectedPlace(place);
+  const handleBoundsChanged = (newBounds) => {
+    setBounds(newBounds);
   };
 
   return (
-    <LoadScript googleMapsApiKey="AIzaSyBFvPaROum9S-qCCxZBCGgwL6vQrsETOpU" libraries={libraries}>
+    <LoadScript 
+      googleMapsApiKey={GOOGLE_MAPS_API_KEY} 
+      libraries={libraries}
+    >
       <CssBaseline />
-      <Header onPlaceChanged={onPlaceChanged} onLoad={onLoad} />
-      <Grid container spacing={3} style={{ width: '100%' }}>
-        <Grid item xs={12} md={4}>
-          <List
-            isLoading={isLoading}
-            childClicked={childClicked}
-            places={filteredPlaces.length ? filteredPlaces : places}
-            type={type}
-            setType={setType}
-            rating={rating}
-            setRating={setRating}
-            selectedPlace={selectedPlace}
-          />
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <Header 
+          onPlaceSelected={handlePlaceSelected}
+        />
+        <Grid 
+          container 
+          spacing={2} 
+          sx={{ 
+            flexGrow: 1, 
+            p: 2, 
+            height: 'calc(100vh - 80px)',
+            overflow: 'hidden'
+          }}
+        >
+          <Grid item xs={12} md={4}>
+            <List
+              isLoading={isLoading}
+              childClicked={childClicked}
+              places={filteredPlaces.length ? filteredPlaces : places}
+              type={type}
+              setType={setType}
+              rating={rating}
+              setRating={setRating}
+            />
+          </Grid>
+          <Grid item xs={12} md={8}>
+            <Map
+              center={center}
+              places={filteredPlaces.length ? filteredPlaces : places}
+              onMarkerClick={handleMarkerClick}
+              onBoundsChanged={handleBoundsChanged}
+              isLoaded={true}
+            />
+          </Grid>
         </Grid>
-        <Grid item xs={12} md={8} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <Map
-            setCoordinates={setCoordinates}
-            setBounds={setBounds}
-            coordinates={coordinates}
-            places={filteredPlaces.length ? filteredPlaces : places}
-            setChildClicked={setChildClicked}
-            weatherData={weatherData}
-            onPlaceClick={handleMapPlaceClick} // Pass handleMapPlaceClick to Map
-          />
-        </Grid>
-      </Grid>
+      </Box>
     </LoadScript>
   );
 };

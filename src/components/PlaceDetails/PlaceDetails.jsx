@@ -1,67 +1,201 @@
 import React from 'react';
-import { Box, Card, Button, Typography, CardContent, CardMedia, CardActions, Chip } from '@mui/material';
-import Rating from '@mui/lab/Rating';
+import { 
+  Box, 
+  Card, 
+  Button, 
+  Typography, 
+  CardContent, 
+  CardMedia, 
+  CardActions, 
+  Chip,
+  Stack,
+  Divider,
+  alpha
+} from '@mui/material';
+import Rating from '@mui/material/Rating';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import TripOriginIcon from '@mui/icons-material/TripOrigin';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
-const PlaceDetails = ({ place }) => {
-    return (
-        <Card elevation={6}>
-            <CardMedia
-                style={{ height: 350 }}
-                image={place.photo ? place.photo.images.large.url : 'https://www.foodserviceandhospitality.com/wp-content/uploads/2016/09/Restaurant-Placeholder-001.jpg'}
-                title={place.name}
-            />
-            <CardContent>
-                <Typography gutterBottom variant="h5">{place.name}</Typography>
-                <Box display="flex" justifyContent="space-between" my={2}>
-                    <Rating value={Number(place.rating)} readOnly />
-                    <Typography gutterBottom variant="subtitle1">out of {place.num_reviews} reviews</Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" my={2}>
-                    <Typography variant="subtitle1">Price</Typography>
-                    <Typography gutterBottom variant="subtitle1">{place.price_level}</Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" my={2}>
-                    <Typography variant="subtitle1">Ranking</Typography>
-                    <Typography gutterBottom variant="subtitle1">{place.ranking}</Typography>
-                </Box>
-                {place?.awards?.map((award, index) => (
-                    <Box key={index} my={1} display="flex" justifyContent="space-between" alignItems="center">
-                        <img src={award.images.small} alt={award.display_name} />
-                        <Typography variant="subtitle2" color="textSecondary">{award.display_name}</Typography>
-                    </Box>
-                ))}
-                <Box display="flex" flexWrap="wrap" my={2}>
-                    {place?.cuisine?.map(({ name }, index) => (
-                        <Chip key={index} size="small" label={name} style={{ margin: '2px' }} />
-                    ))}
-                </Box>
-                {place?.address && (
-                    <Typography gutterBottom variant="subtitle2" color="textSecondary" style={{ marginTop: '10px' }}>
-                        <LocationOnIcon /> {place.address}
-                    </Typography>
-                )}
-                {place?.phone && (
-                    <Typography variant="subtitle2" color="textSecondary">
-                        <PhoneIcon /> {place.phone}
-                    </Typography>
-                )}
-                <CardActions>
-                    {place.web_url && (
-                        <Button size="small" color="primary" onClick={() => window.open(place.web_url, '_blank')}>
-                            Trip Advisor
-                        </Button>
-                    )}
-                    {place.website && (
-                        <Button size="small" color="primary" onClick={() => window.open(place.website, '_blank')}>
-                            Website
-                        </Button>
-                    )}
-                </CardActions>
-            </CardContent>
-        </Card>
-    );
+const PlaceDetails = ({ place, selected }) => {
+  return (
+    <Card 
+      elevation={selected ? 8 : 3}
+      sx={{ 
+        transition: 'all 0.3s ease-in-out',
+        border: selected ? 2 : 0,
+        borderColor: 'primary.main',
+        transform: selected ? 'scale(1.02)' : 'scale(1)',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: 6,
+        },
+      }}
+    >
+      <CardMedia
+        component="img"
+        height="240"
+        image={
+          place.photo 
+            ? place.photo.images.large.url 
+            : 'https://www.foodserviceandhospitality.com/wp-content/uploads/2016/09/Restaurant-Placeholder-001.jpg'
+        }
+        alt={place.name}
+        sx={{ 
+          objectFit: 'cover',
+          position: 'relative',
+        }}
+      />
+      
+      <CardContent>
+        <Typography 
+          variant="h6" 
+          gutterBottom 
+          sx={{ 
+            fontWeight: 700,
+            lineHeight: 1.3,
+            mb: 2,
+          }}
+        >
+          {place.name}
+        </Typography>
+
+        {/* Rating Section */}
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+          <Rating 
+            value={Number(place.rating) || 0} 
+            precision={0.5} 
+            readOnly 
+            size="small"
+          />
+          <Typography variant="body2" color="text.secondary">
+            ({place.num_reviews || 0} reviews)
+          </Typography>
+        </Stack>
+
+        <Divider sx={{ my: 2 }} />
+
+        {/* Price and Ranking */}
+        <Stack spacing={1.5}>
+          {place.price_level && (
+            <Box display="flex" alignItems="center" gap={1}>
+              <AttachMoneyIcon fontSize="small" color="action" />
+              <Typography variant="body2" color="text.secondary">
+                Price:
+              </Typography>
+              <Typography variant="body2" fontWeight={600}>
+                {place.price_level}
+              </Typography>
+            </Box>
+          )}
+
+          {place.ranking && (
+            <Box display="flex" alignItems="flex-start" gap={1}>
+              <TripOriginIcon fontSize="small" color="action" sx={{ mt: 0.3 }} />
+              <Typography variant="body2" color="text.secondary">
+                {place.ranking}
+              </Typography>
+            </Box>
+          )}
+        </Stack>
+
+        {/* Awards */}
+        {place?.awards?.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            {place.awards.map((award, index) => (
+              <Box 
+                key={index} 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  mb: 1,
+                  p: 1,
+                  borderRadius: 1,
+                  bgcolor: (theme) => alpha(theme.palette.warning.main, 0.1),
+                }}
+              >
+                <EmojiEventsIcon fontSize="small" color="warning" />
+                <Typography variant="caption" sx={{ flex: 1 }}>
+                  {award.display_name}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
+
+        {/* Cuisine Tags */}
+        {place?.cuisine?.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+              {place.cuisine.map(({ name }, index) => (
+                <Chip 
+                  key={index} 
+                  label={name} 
+                  size="small" 
+                  variant="outlined"
+                  sx={{ mb: 0.5 }}
+                />
+              ))}
+            </Stack>
+          </Box>
+        )}
+
+        <Divider sx={{ my: 2 }} />
+
+        {/* Contact Information */}
+        <Stack spacing={1}>
+          {place?.address && (
+            <Box display="flex" alignItems="flex-start" gap={1}>
+              <LocationOnIcon fontSize="small" color="action" sx={{ mt: 0.2 }} />
+              <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+                {place.address}
+              </Typography>
+            </Box>
+          )}
+
+          {place?.phone && (
+            <Box display="flex" alignItems="center" gap={1}>
+              <PhoneIcon fontSize="small" color="action" />
+              <Typography variant="body2" color="text.secondary">
+                {place.phone}
+              </Typography>
+            </Box>
+          )}
+        </Stack>
+      </CardContent>
+
+      <CardActions sx={{ px: 2, pb: 2, pt: 0 }}>
+        <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
+          {place.web_url && (
+            <Button 
+              size="small" 
+              variant="outlined"
+              startIcon={<OpenInNewIcon />}
+              onClick={() => window.open(place.web_url, '_blank')}
+              sx={{ flex: 1 }}
+            >
+              TripAdvisor
+            </Button>
+          )}
+          {place.website && (
+            <Button 
+              size="small" 
+              variant="contained"
+              startIcon={<OpenInNewIcon />}
+              onClick={() => window.open(place.website, '_blank')}
+              sx={{ flex: 1 }}
+            >
+              Website
+            </Button>
+          )}
+        </Stack>
+      </CardActions>
+    </Card>
+  );
 };
 
 export default PlaceDetails;
