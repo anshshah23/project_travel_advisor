@@ -106,16 +106,31 @@ router.get('/check/:geoId', verifyToken, async (req, res) => {
   try {
     const { geoId } = req.params;
 
+    // Check if userId was set by verifyToken middleware
+    if (!req.userId) {
+      console.error('UserId not found in request');
+      return res.status(401).json({ error: 'Invalid authentication' });
+    }
+
     const user = await User.findById(req.userId);
     if (!user) {
+      console.error('User not found in database:', req.userId);
       return res.status(404).json({ error: 'User not found' });
     }
 
     const isFavorited = user.favorites.some(fav => fav.geoId === geoId);
     res.json({ isFavorited });
   } catch (error) {
-    console.error('Check favorite error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Check favorite error details:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.userId,
+      geoId: req.params.geoId
+    });
+    res.status(500).json({ 
+      error: 'Server error', 
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
 });
 

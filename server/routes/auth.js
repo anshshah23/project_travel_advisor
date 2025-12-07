@@ -142,6 +142,7 @@ const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
+    console.error('No token provided in request');
     return res.status(401).json({ error: 'No token provided' });
   }
 
@@ -150,7 +151,12 @@ const verifyToken = (req, res, next) => {
     req.userId = decoded.userId;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    console.error('Token verification error:', {
+      name: error.name,
+      message: error.message,
+      tokenPreview: token.substring(0, 20) + '...'
+    });
+    return res.status(401).json({ error: 'Invalid token', reason: error.message });
   }
 };
 
