@@ -87,26 +87,31 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Login with Supabase Auth
-    const { data: supabaseData, error: supabaseError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (supabaseError) {
+    // Find user in MongoDB first
+    const user = await User.findOne({ email });
+    if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Find user in MongoDB
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-
-    // Verify password
+    // Verify password against MongoDB
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Try to login with Supabase Auth (optional, for sync)
+    let supabaseSession = null;
+    try {
+      const { data: supabaseData, error: supabaseError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (!supabaseError) {
+        supabaseSession = supabaseData.session;
+      }
+    } catch (supabaseError) {
+      // Continue without Supabase if it fails
+      console.log('Supabase login skipped:', supabaseError.message);
     }
 
     // Generate JWT token
@@ -124,7 +129,7 @@ router.post('/login', async (req, res) => {
         email: user.email,
         name: user.name,
       },
-      supabaseSession: supabaseData.session,
+      supabaseSession,
     });
   } catch (error) {
     console.error('Login error:', error);
