@@ -3,54 +3,64 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-const authRoutes = require('./routes/auth');
-const favoritesRoutes = require('./routes/favorites');
-
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection with serverless optimizations
+// MongoDB Connection
+let isConnected = false;
+
 const connectDB = async () => {
+  if (isConnected) {
+    console.log('Using existing MongoDB connection');
+    return;
+  }
+
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      socketTimeoutMS: 45000, // Close sockets after 45s
+    const db = await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
     });
+
+    isConnected = db.connections[0].readyState === 1;
     console.log('MongoDB connected successfully');
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-    // Don't exit in serverless - let requests retry
+  } catch (error) {
+    console.error('MongoDB connection error:', error.message);
+    isConnected = false;
   }
 };
 
+// Connect on startup
 connectDB();
 
-// Handle connection events
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected. Attempting to reconnect...');
-  connectDB();
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB error:', err);
-});
-
 // Routes
+const authRoutes = require('./routes/auth');
+const favoritesRoutes = require('./routes/favorites');
+
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoritesRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    message: 'Travel Advisor API is running',
-    mongoStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-  });
+// Health check - ensure DB connection
+app.get('/api/health', async (req, res) => {
+  try {
+    await connectDB(); // Ensure connection before checking status
+    
+    res.json({ 
+      status: 'ok', 
+      message: 'Travel Advisor API is running',
+      mongoStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      readyState: mongoose.connection.readyState // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+    });
+  } catch (error) {
+    res.json({ 
+      status: 'ok', 
+      message: 'Travel Advisor API is running',
+      mongoStatus: 'disconnected',
+      error: error.message
+    });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
