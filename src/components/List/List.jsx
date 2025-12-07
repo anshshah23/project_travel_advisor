@@ -65,7 +65,7 @@ const List = ({ places, type, setType, rating, setRating, isLoading, childClicke
       </Typography>
       
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Restaurants, Hotels & Attractions around you
+        Restaurants & Attractions around you
       </Typography>
 
       <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
@@ -73,7 +73,6 @@ const List = ({ places, type, setType, rating, setRating, isLoading, childClicke
           <InputLabel>Type</InputLabel>
           <Select value={type} onChange={(e) => setType(e.target.value)} label="Type">
             <MenuItem value="restaurants">🍽️ Restaurants</MenuItem>
-            <MenuItem value="hotels">🏨 Hotels</MenuItem>
             <MenuItem value="attractions">🎭 Attractions</MenuItem>
           </Select>
         </FormControl>

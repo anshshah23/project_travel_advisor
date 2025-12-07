@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   AppBar, 
   Toolbar, 
@@ -9,11 +10,17 @@ import {
   Autocomplete,
   styled,
   alpha,
-  CircularProgress
+  CircularProgress,
+  Button,
+  IconButton
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ExploreIcon from '@mui/icons-material/Explore';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import LoginIcon from '@mui/icons-material/Login';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useAuth } from '../../contexts/AuthContext';
 import { getAutocompleteSuggestions } from '../../api/travelAdvisorAPI';
 
 const SearchTextField = styled(TextField)(({ theme }) => ({
@@ -54,6 +61,8 @@ const Header = ({ onPlaceSelected }) => {
   const [searchValue, setSearchValue] = useState('');
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let timeoutId;
@@ -63,32 +72,15 @@ const Header = ({ onPlaceSelected }) => {
       
       timeoutId = setTimeout(async () => {
         try {
+          console.log('Searching for:', searchValue);
           const result = await getAutocompleteSuggestions(searchValue);
+          console.log('Autocomplete API response:', result);
           
-          if (result?.data) {
-            // Handle both array and object responses
-            const dataArray = Array.isArray(result.data) ? result.data : [];
-            
-            const suggestions = dataArray
-              .filter(item => {
-                // Accept both geos and other location types
-                const resultObj = item.result_object || {};
-                return resultObj.latitude && resultObj.longitude;
-              })
-              .map(item => {
-                const obj = item.result_object || {};
-                return {
-                  name: obj.name || item.name,
-                  address: obj.address_string || obj.address || '',
-                  lat: Number(obj.latitude),
-                  lng: Number(obj.longitude),
-                  location_id: obj.location_id || item.location_id,
-                  geoId: obj.location_id || item.location_id
-                };
-              });
-            
-            setOptions(suggestions);
+          if (result?.data && Array.isArray(result.data)) {
+            console.log('Suggestions:', result.data);
+            setOptions(result.data);
           } else {
+            console.log('No data in result');
             setOptions([]);
           }
         } catch (error) {
@@ -114,9 +106,12 @@ const Header = ({ onPlaceSelected }) => {
 
   const handlePlaceSelect = useCallback((event, value) => {
     if (value && value.lat && value.lng) {
+      // Send coordinates to parent to fetch places for that location
       onPlaceSelected({
         lat: value.lat,
         lng: value.lng,
+        geoId: value.geoId,
+        name: value.name
       });
     }
   }, [onPlaceSelected]);
@@ -131,6 +126,7 @@ const Header = ({ onPlaceSelected }) => {
         <Box display="flex" alignItems="center" sx={{ flexGrow: 1, width: { xs: '100%', sm: 'auto' } }}>
           <ExploreIcon sx={{ fontSize: 40, mr: 2 }} />
           <Box>
+        <a href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
             <Typography variant="h5" sx={{ fontWeight: 700, letterSpacing: 1 }}>
               Travel Advisor
             </Typography>
@@ -140,12 +136,13 @@ const Header = ({ onPlaceSelected }) => {
                 opacity: 0.9,
                 display: { xs: 'none', sm: 'block' }
               }}
-            >
+              >
               Discover amazing places around the world
             </Typography>
+        </a>
           </Box>
         </Box>
-        <Box sx={{ width: { xs: '100%', sm: 400 }, ml: { sm: 2 } }}>
+        <Box sx={{ width: { xs: '100%', sm: 400 }, ml: { sm: 2 }, mr: { sm: 2 } }}>
           <Autocomplete
             freeSolo
             options={options}
@@ -192,6 +189,52 @@ const Header = ({ onPlaceSelected }) => {
               />
             )}
           />
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {user ? (
+            <>
+              <Button 
+                color="inherit" 
+                startIcon={<FavoriteIcon />}
+                onClick={() => navigate('/favorites')}
+                sx={{ display: { xs: 'none', sm: 'flex' } }}
+              >
+                Favorites
+              </Button>
+              <IconButton 
+                color="inherit" 
+                onClick={() => navigate('/favorites')}
+                sx={{ display: { xs: 'flex', sm: 'none' } }}
+              >
+                <FavoriteIcon />
+              </IconButton>
+              <Button 
+                color="inherit" 
+                startIcon={<LogoutIcon />}
+                onClick={logout}
+                sx={{ display: { xs: 'none', sm: 'flex' } }}
+              >
+                Logout
+              </Button>
+              <IconButton 
+                color="inherit" 
+                onClick={logout}
+                sx={{ display: { xs: 'flex', sm: 'none' } }}
+              >
+                <LogoutIcon />
+              </IconButton>
+            </>
+          ) : (
+            <>
+              <Button 
+                color="inherit" 
+                startIcon={<LoginIcon />}
+                onClick={() => navigate('/login')}
+              >
+                Login
+              </Button>
+            </>
+          )}
         </Box>
       </Toolbar>
     </AppBar>

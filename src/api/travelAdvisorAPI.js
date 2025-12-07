@@ -1,57 +1,70 @@
 import axios from 'axios';
+import { apiCache, rateLimiter } from '../utils/apiCache';
 
-export const getPlacesData = async (type, sw, ne) => {
+export const getPlacesData = async (type, sw, ne, geoId = null) => {
   try {
-    const endpoint = type === 'hotels' 
-      ? 'https://travel-advisor.p.rapidapi.com/hotels/v2/list'
-      : `https://travel-advisor.p.rapidapi.com/${type}/list-in-boundary`;
+    const bounds = { sw, ne };
     
-    let response;
-    
-    if (type === 'hotels') {
-      // POST request for hotels
-      response = await axios.post(
-        `${endpoint}?currency=USD&units=km&lang=en_US`,
-        {
-          boundingBox: {
-            northEastCorner: {
-              latitude: ne.lat,
-              longitude: ne.lng
-            },
-            southWestCorner: {
-              latitude: sw.lat,
-              longitude: sw.lng
-            }
-          },
-          updateToken: ""
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-rapidapi-key': process.env.REACT_APP_RAPIDAPI_TRAVEL_API_KEY || '7e30ce8b94msh2f566c88a27ea8fp14517bjsnf0e3b114ef98',
-            'x-rapidapi-host': 'travel-advisor.p.rapidapi.com',
-          }
-        }
-      );
-      return response.data?.data?.data || [];
-    } else {
-      // GET request for restaurants and attractions
-      response = await axios.get(endpoint, {
-        params: {
-          bl_latitude: sw.lat,
-          bl_longitude: sw.lng,
-          tr_longitude: ne.lng,
-          tr_latitude: ne.lat,
-        },
-        headers: {
-          'x-rapidapi-key': process.env.REACT_APP_RAPIDAPI_TRAVEL_API_KEY || '7e30ce8b94msh2f566c88a27ea8fp14517bjsnf0e3b114ef98',
-          'x-rapidapi-host': 'travel-advisor.p.rapidapi.com',
-        },
-      });
-      return response.data?.data || [];
+    // Check cache first
+    const cachedData = apiCache.get(type, bounds);
+    if (cachedData) {
+      return cachedData;
     }
+    
+    // Check rate limit
+    const stats = rateLimiter.getStats();
+    if (!rateLimiter.canMakeRequest()) {
+      console.warn(`⚠️ Rate limit exceeded! ${stats.remaining}/${stats.limit} requests remaining. Reset in ${stats.resetInMinutes} minutes.`);
+      
+      // Show user-friendly message
+      alert(`API rate limit reached (${stats.limit} requests per hour). Please wait ${stats.resetInMinutes} minutes or use cached data.`);
+      
+      return [];
+    }
+    
+    console.log(`📡 API Request - ${stats.remaining - 1}/${stats.limit} remaining after this request`);
+    
+    // Use list-in-boundary for restaurants and attractions only
+    const endpoint = `https://travel-advisor.p.rapidapi.com/${type}/list-in-boundary`;
+    const params = {
+      bl_latitude: sw.lat,
+      bl_longitude: sw.lng,
+      tr_longitude: ne.lng,
+      tr_latitude: ne.lat,
+      currency: 'USD',
+      lunit: 'km',
+      lang: 'en_US'
+    };
+    
+    console.log(`Fetching ${type} in boundary`);
+    
+    const response = await axios.get(endpoint, {
+      params,
+      headers: {
+        'x-rapidapi-key': process.env.REACT_APP_RAPIDAPI_TRAVEL_API_KEY,
+        'x-rapidapi-host': 'travel-advisor.p.rapidapi.com',
+      },
+    });
+    
+    // Record successful API call
+    rateLimiter.recordRequest();
+    
+    const places = response.data?.data || [];
+    console.log(`Found ${places.length} ${type}`, places.slice(0, 2).map(p => ({ 
+      name: p.name, 
+      location_id: p.location_id,
+      rating: p.rating
+    })));
+    
+    // Cache the results
+    apiCache.set(type, bounds, places);
+    
+    return places;
   } catch (error) {
-    console.error('Error fetching places:', error);
+    console.error(`Error fetching ${type}:`, error.response?.data || error.message);
+    if (error.response) {
+      console.error('API Response:', error.response.status, error.response.statusText);
+    }
     return [];
   }
 };
@@ -62,7 +75,7 @@ export const getWeatherData = async (lat, lng) => {
       const { data } = await axios.get('https://community-open-weather-map.p.rapidapi.com/find', {
         params: { lat, lon: lng },
         headers: {
-          'x-rapidapi-key': process.env.REACT_APP_RAPIDAPI_TRAVEL_API_KEY || '7e30ce8b94msh2f566c88a27ea8fp14517bjsnf0e3b114ef98',
+          'x-rapidapi-key': process.env.REACT_APP_RAPIDAPI_TRAVEL_API_KEY,
           'x-rapidapi-host': 'community-open-weather-map.p.rapidapi.com',
         },
       });
@@ -76,53 +89,44 @@ export const getWeatherData = async (lat, lng) => {
 
 export const getAutocompleteSuggestions = async (query) => {
   try {
-    const { data } = await axios.post(
-      'https://travel-advisor.p.rapidapi.com/locations/v2/search?currency=USD&units=km&lang=en_US',
+    const { data } = await axios.get(
+      'https://travel-advisor.p.rapidapi.com/locations/auto-complete',
       {
-        query: query,
-        updateToken: ""
-      },
-      {
+        params: {
+          query: query,
+          lang: 'en_US',
+          units: 'km'
+        },
         headers: {
-          'Content-Type': 'application/json',
-          'x-rapidapi-key': process.env.REACT_APP_RAPIDAPI_TRAVEL_API_KEY || '7e30ce8b94msh2f566c88a27ea8fp14517bjsnf0e3b114ef98',
+          'x-rapidapi-key': process.env.REACT_APP_RAPIDAPI_TRAVEL_API_KEY,
           'x-rapidapi-host': 'travel-advisor.p.rapidapi.com',
         }
       }
     );
 
-    return data;
+    // Parse the v1 API response structure
+    const suggestions = (data?.data || [])
+      .filter(item => {
+        const obj = item.result_object || {};
+        return obj.latitude && obj.longitude;
+      })
+      .map(item => {
+        const obj = item.result_object || {};
+        return {
+          name: obj.name || '',
+          address: obj.location_string || '',
+          lat: Number(obj.latitude),
+          lng: Number(obj.longitude),
+          location_id: obj.location_id,
+          geoId: obj.location_id
+        };
+      });
+
+    return { data: suggestions };
   } catch (error) {
     console.error('Autocomplete error:', error);
     return { data: [] };
   }
 };
 
-export const searchPlacesByLocation = async (geoId, type = 'restaurants') => {
-  try {
-    // This function can be used to get places for a specific geoId from search
-    const endpoint = type === 'hotels'
-      ? 'https://travel-advisor.p.rapidapi.com/hotels/v2/list'
-      : `https://travel-advisor.p.rapidapi.com/${type}/list`;
-    
-    const { data } = await axios.post(
-      `${endpoint}?currency=USD&units=km&lang=en_US`,
-      {
-        geoId: geoId,
-        updateToken: ""
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-rapidapi-key': process.env.REACT_APP_RAPIDAPI_TRAVEL_API_KEY || '7e30ce8b94msh2f566c88a27ea8fp14517bjsnf0e3b114ef98',
-          'x-rapidapi-host': 'travel-advisor.p.rapidapi.com',
-        }
-      }
-    );
-    
-    return data?.data?.data || [];
-  } catch (error) {
-    console.error('Error searching places by location:', error);
-    return [];
-  }
-};
+

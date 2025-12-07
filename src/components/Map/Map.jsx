@@ -21,7 +21,7 @@ const containerStyle = {
   height: '85vh',
 };
 
-const Map = ({ center, places, onMarkerClick, isLoaded, onBoundsChanged }) => {
+const Map = ({ center, places, onMarkerClick, googleMapsLoaded, onBoundsChanged }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [selectedPlace, setSelectedPlace] = useState(null);
@@ -64,7 +64,21 @@ const Map = ({ center, places, onMarkerClick, isLoaded, onBoundsChanged }) => {
     fullscreenControl: true,
   };
 
-  if (!isLoaded || !center.lat) return <div>Loading map...</div>;
+  if (!googleMapsLoaded || !center.lat) {
+    return (
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          height: '85vh',
+          bgcolor: '#f5f5f5'
+        }}
+      >
+        <Typography variant="h6" color="text.secondary">Loading map...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <GoogleMap
